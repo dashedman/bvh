@@ -12,7 +12,7 @@ use crate::utils::joint_aabb_of_shapes;
 
 use std::mem::MaybeUninit;
 
-use super::{BvhNode, BvhNodeBuildArgs, DistanceTraverseIterator, ShapeIndex, Shapes};
+use super::{BvhNode, BvhNodeBuildArgs, DistanceByChildTraverseIterator, DistanceTraverseIterator, ShapeIndex, Shapes};
 
 /// The [`Bvh`] data structure. Contains the list of [`BvhNode`]s.
 ///
@@ -136,6 +136,10 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
     /// This is a best-effort function that orders interior parent nodes before ordering child
     /// nodes, so the output is not necessarily perfectly sorted.
     ///
+    /// Useful if child don't intersect each other.
+    ///
+    /// Time complexity: for first O(log(n)), for all O(n*log(n))
+    ///
     /// [`Bvh`]: struct.Bvh.html
     /// [`Aabb`]: ../aabb/struct.AABB.html
     ///
@@ -151,8 +155,7 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
     /// Returns a subset of [`Shape`], in which the [`Aabb`]s of the elements were hit by [`Ray`].
     /// Return in order from farthest to nearest for ray.
     ///
-    /// This is a best-effort function that orders interior parent nodes before ordering child
-    /// nodes, so the output is not necessarily perfectly sorted.
+    /// Time complexity: for first O(log(n)), for all O(n*log(n)).
     ///
     /// [`Bvh`]: struct.Bvh.html
     /// [`Aabb`]: ../aabb/struct.AABB.html
@@ -163,6 +166,50 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
         shapes: &'shape [Shape],
     ) -> DistanceTraverseIterator<'bvh, 'shape, T, D, Shape, false> {
         DistanceTraverseIterator::new(self, ray, shapes)
+    }
+
+    /// Creates a [`DistanceTraverseIterator`] to traverse the [`Bvh`].
+    /// Returns a subset of [`shape`], in which the [`Aabb`]s of the elements were hit by [`Ray`].
+    /// Return in order from nearest to farthest for ray.
+    ///
+    /// This is a best-effort function that orders interior parent nodes before ordering child
+    /// nodes, so the output is not necessarily perfectly sorted.
+    ///
+    /// Useful if childs don't intersect each other.
+    ///
+    /// Time complexity: for first O(log(n)), for all O(n).
+    ///
+    /// [`Bvh`]: struct.Bvh.html
+    /// [`Aabb`]: ../aabb/struct.AABB.html
+    ///
+    pub fn nearest_by_child_traverse_iterator<'bvh, 'shape, Shape: Bounded<T, D>>(
+        &'bvh self,
+        ray: &'bvh Ray<T, D>,
+        shapes: &'shape [Shape],
+    ) -> DistanceByChildTraverseIterator<'bvh, 'shape, T, D, Shape, true> {
+        DistanceByChildTraverseIterator::new(self, ray, shapes)
+    }
+
+    /// Creates a [`DistanceTraverseIterator`] to traverse the [`Bvh`].
+    /// Returns a subset of [`Shape`], in which the [`Aabb`]s of the elements were hit by [`Ray`].
+    /// Return in order from farthest to nearest for ray.
+    ///
+    /// This is a best-effort function that orders interior parent nodes before ordering child
+    /// nodes, so the output is not necessarily perfectly sorted.
+    ///
+    /// Useful if childs don't intersect each other.
+    ///
+    /// Time complexity: for first O(log(n)), for all O(n).
+    ///
+    /// [`Bvh`]: struct.Bvh.html
+    /// [`Aabb`]: ../aabb/struct.AABB.html
+    ///
+    pub fn farthest_child_traverse_iterator<'bvh, 'shape, Shape: Bounded<T, D>>(
+        &'bvh self,
+        ray: &'bvh Ray<T, D>,
+        shapes: &'shape [Shape],
+    ) -> DistanceByChildTraverseIterator<'bvh, 'shape, T, D, Shape, false> {
+        DistanceByChildTraverseIterator::new(self, ray, shapes)
     }
 
     /// Prints the [`Bvh`] in a tree-like visualization.
