@@ -136,8 +136,6 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
     /// This is a best-effort function that orders interior parent nodes before ordering child
     /// nodes, so the output is not necessarily perfectly sorted.
     ///
-    /// Useful if child don't intersect each other.
-    ///
     /// Time complexity: for first O(log(n)), for all O(n*log(n))
     ///
     /// [`Bvh`]: struct.Bvh.html
