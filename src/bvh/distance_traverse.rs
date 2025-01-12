@@ -3,13 +3,13 @@ use std::collections::BinaryHeap;
 
 use crate::aabb::Bounded;
 use crate::bounding_hierarchy::BHValue;
-use crate::bvh::{Bvh, BvhNode, iter_initially_has_node};
+use crate::bvh::{iter_initially_has_node, Bvh, BvhNode};
 use crate::ray::Ray;
 
 #[derive(Debug, Clone, Copy)]
-struct  DistNodePair <T: PartialOrd> {
+struct DistNodePair<T: PartialOrd> {
     dist: T,
-    node_index: usize
+    node_index: usize,
 }
 
 impl<T: PartialOrd> Eq for DistNodePair<T> {}
@@ -31,7 +31,6 @@ impl<T: PartialOrd> Ord for DistNodePair<T> {
         self.partial_cmp(other).unwrap()
     }
 }
-
 
 /// Iterator to traverse a [`Bvh`] in order from nearest [`Aabb`] to farthest for [`Ray`],
 /// or vice versa, without memory allocations.
@@ -89,29 +88,31 @@ where
                 ref child_r_aabb,
                 ..
             } => {
-                let left_dist_opt = self
-                    .ray
-                    .intersection_slice_for_aabb(child_l_aabb)
-                    .map(|(d, _)| d);
-                let right_dist_opt = self
-                    .ray
-                    .intersection_slice_for_aabb(child_r_aabb)
-                    .map(|(d, _)| d);
+                let left_dist_opt = self.ray.intersection_slice_for_aabb(child_l_aabb);
+                let right_dist_opt = self.ray.intersection_slice_for_aabb(child_r_aabb);
 
-                if let Some(left_dist) = left_dist_opt {
+                if let Some((left_dist_min, left_dist_max)) = left_dist_opt {
                     // left child has intersection with ray
+                    let left_dist = if ASCENDING {
+                        left_dist_min
+                    } else {
+                        left_dist_max
+                    };
                     self.add_to_heap(left_dist, child_l_index);
                 };
-                if let Some(right_dist) = right_dist_opt {
+                if let Some((right_dist_min, right_dist_max)) = right_dist_opt {
                     // right child has intersection with ray
+                    let right_dist = if ASCENDING {
+                        right_dist_min
+                    } else {
+                        right_dist_max
+                    };
                     self.add_to_heap(right_dist, child_r_index);
                 };
 
                 None
             }
-            BvhNode::Leaf { shape_index, .. } => {
-                Some(shape_index)
-            }
+            BvhNode::Leaf { shape_index, .. } => Some(shape_index),
         }
     }
 
@@ -121,17 +122,15 @@ where
             // we need the smallest distance, so we negotiate value
             self.heap.push(DistNodePair {
                 dist: dist_to_node.neg(),
-                node_index
+                node_index,
             });
         } else {
             // we need the biggest distance, so everything fine
             self.heap.push(DistNodePair {
                 dist: dist_to_node,
-                node_index
+                node_index,
             });
         };
-
-
     }
 }
 
@@ -148,7 +147,7 @@ where
                 // Get favorite (nearest/farthest) node and unpack
                 let DistNodePair {
                     dist: _,
-                    node_index
+                    node_index,
                 } = heap_leader;
 
                 if let Some(shape_index) = self.unpack_node(node_index) {
@@ -172,7 +171,9 @@ mod tests {
     use crate::bounding_hierarchy::{BHShape, BHValue};
     use crate::bvh::Bvh;
     use crate::ray::Ray;
-    use crate::testbase::{generate_aligned_boxes, TAabb3, TBvh3, TPoint3, TRay3, TVector3, UnitBox};
+    use crate::testbase::{
+        generate_aligned_boxes, TAabb3, TBvh3, TPoint3, TRay3, TVector3, UnitBox,
+    };
 
     /// Create a `Bvh` for a fixed scene structure.
     pub fn build_some_bvh() -> (Vec<UnitBox>, TBvh3) {
@@ -296,63 +297,32 @@ mod tests {
 
     #[test]
     fn test_incorrect_order() {
-
-
-
         let mut aabbs = [
             TAabb3 {
-                min: TPoint3::new(
-                    -0.33333334,
-                    -5000.3335,
-                    -5000.3335,
-                ),
-                max: TPoint3::new(
-                    1.3333334,
-                    0.33333334,
-                    0.33333334,
-                ),
+                min: TPoint3::new(-0.33333334, -5000.3335, -5000.3335),
+                max: TPoint3::new(1.3333334, 0.33333334, 0.33333334),
             },
             TAabb3 {
-                min: TPoint3::new(
-                    -5000.3335,
-                    -5000.3335,
-                    -5000.3335,
-                ),
-                max: TPoint3::new(
-                    0.33333334,
-                    0.33333334,
-                    -4998.6665,
-                ),
+                min: TPoint3::new(-5000.3335, -5000.3335, -5000.3335),
+                max: TPoint3::new(0.33333334, 0.33333334, -4998.6665),
             },
             TAabb3 {
-                min: TPoint3::new(
-                    -5000.3335,
-                    -5000.3335,
-                    -5000.3335,
-                ),
-                max: TPoint3::new(
-                    0.33333334,
-                    0.33333334,
-                    5000.3335,
-                ),
-            }
+                min: TPoint3::new(-5000.3335, -5000.3335, -5000.3335),
+                max: TPoint3::new(0.33333334, 0.33333334, 5000.3335),
+            },
         ];
-        let ray = TRay3::new(TPoint3::new(
-            -5000.0,
-            -5000.0,
-            -5000.0,
-        ),
-                             TVector3::new(
-                                 1.0,
-                                 0.0,
-                                 0.0,
-                             ));
+        let ray = TRay3::new(
+            TPoint3::new(-5000.0, -5000.0, -5000.0),
+            TVector3::new(1.0, 0.0, 0.0),
+        );
 
         let bvh = TBvh3::build(&mut aabbs);
-        assert!(bvh.nearest_traverse_iterator(&ray, &aabbs).is_sorted_by(|a, b| {
-            let (a, _) = ray.intersection_slice_for_aabb(a).unwrap();
-            let (b, _) = ray.intersection_slice_for_aabb(b).unwrap();
-            a <= b
-        }));
+        assert!(bvh
+            .nearest_traverse_iterator(&ray, &aabbs)
+            .is_sorted_by(|a, b| {
+                let (a, _) = ray.intersection_slice_for_aabb(a).unwrap();
+                let (b, _) = ray.intersection_slice_for_aabb(b).unwrap();
+                a <= b
+            }));
     }
 }

@@ -5,13 +5,13 @@
 
 mod bvh_impl;
 mod bvh_node;
-mod distance_traverse;
 mod distance_by_child_traverse;
+mod distance_traverse;
 mod iter;
 mod optimization;
 
 pub use self::bvh_impl::*;
 pub use self::bvh_node::*;
-pub use self::distance_traverse::*;
 pub use self::distance_by_child_traverse::*;
+pub use self::distance_traverse::*;
 pub use self::iter::*;

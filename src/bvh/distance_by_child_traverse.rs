@@ -40,7 +40,7 @@ pub struct DistanceByChildTraverseIterator<
 }
 
 impl<'bvh, 'shape, T, const D: usize, Shape: Bounded<T, D>, const ASCENDING: bool>
-DistanceByChildTraverseIterator<'bvh, 'shape, T, D, Shape, ASCENDING>
+    DistanceByChildTraverseIterator<'bvh, 'shape, T, D, Shape, ASCENDING>
 where
     T: BHValue,
 {
@@ -177,7 +177,7 @@ where
 }
 
 impl<'shape, T, const D: usize, Shape: Bounded<T, D>, const ASCENDING: bool> Iterator
-for DistanceByChildTraverseIterator<'_, 'shape, T, D, Shape, ASCENDING>
+    for DistanceByChildTraverseIterator<'_, 'shape, T, D, Shape, ASCENDING>
 where
     T: BHValue,
 {

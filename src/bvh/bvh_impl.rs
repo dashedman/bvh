@@ -12,7 +12,10 @@ use crate::utils::joint_aabb_of_shapes;
 
 use std::mem::MaybeUninit;
 
-use super::{BvhNode, BvhNodeBuildArgs, DistanceByChildTraverseIterator, DistanceTraverseIterator, ShapeIndex, Shapes};
+use super::{
+    BvhNode, BvhNodeBuildArgs, DistanceByChildTraverseIterator, DistanceTraverseIterator,
+    ShapeIndex, Shapes,
+};
 
 /// The [`Bvh`] data structure. Contains the list of [`BvhNode`]s.
 ///
