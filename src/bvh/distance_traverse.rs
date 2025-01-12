@@ -20,6 +20,7 @@ impl<T: PartialOrd> PartialEq<Self> for DistNodePair<T> {
     }
 }
 
+#[allow(clippy::non_canonical_partial_ord_impl)]
 impl<T: PartialOrd> PartialOrd<Self> for DistNodePair<T> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         self.dist.partial_cmp(&other.dist)
@@ -142,21 +143,16 @@ where
     type Item = &'shape Shape;
 
     fn next(&mut self) -> Option<&'shape Shape> {
-        loop {
-            if let Some(heap_leader) = self.heap.pop() {
-                // Get favorite (nearest/farthest) node and unpack
-                let DistNodePair {
-                    dist: _,
-                    node_index,
-                } = heap_leader;
+        while let Some(heap_leader) = self.heap.pop() {
+            // Get favorite (nearest/farthest) node and unpack
+            let DistNodePair {
+                dist: _,
+                node_index,
+            } = heap_leader;
 
-                if let Some(shape_index) = self.unpack_node(node_index) {
-                    // unpacked leaf
-                    return Some(&self.shapes[shape_index]);
-                }
-            } else {
-                // Traverse is complete. All nodes unpacked. All leafs returned
-                break;
+            if let Some(shape_index) = self.unpack_node(node_index) {
+                // unpacked leaf
+                return Some(&self.shapes[shape_index]);
             }
         }
         None
